@@ -6,6 +6,13 @@ module DiscourseAssign
     requires_login
     before_action :ensure_logged_in, :ensure_assign_allowed
 
+    # Only allow certain target types to be assignable
+    ASSIGNABLE_TYPES = {
+      "Topic" => ::Topic,
+      "Post"  => ::Post,
+      # add other permitted types here...
+    }.freeze
+
     def suggestions
       users = [current_user, *recent_assignees]
       render json: {
@@ -27,7 +34,9 @@ module DiscourseAssign
       target_id = params.require(:target_id)
       target_type = params.require(:target_type)
       raise Discourse::NotFound if !Assignment.valid_type?(target_type)
-      target = target_type.constantize.where(id: target_id).first
+      klass = ASSIGNABLE_TYPES[target_type]
+      raise Discourse::NotFound unless klass
+      target = klass.where(id: target_id).first
       raise Discourse::NotFound unless target
 
       assigner = Assigner.new(target, current_user)
@@ -57,7 +66,9 @@ module DiscourseAssign
 
       raise Discourse::NotFound unless assign_to
       raise Discourse::NotFound if !Assignment.valid_type?(target_type)
-      target = target_type.constantize.where(id: target_id).first
+      klass = ASSIGNABLE_TYPES[target_type]
+      raise Discourse::NotFound unless klass
+      target = klass.where(id: target_id).first
       raise Discourse::NotFound unless target
 
       assign =
