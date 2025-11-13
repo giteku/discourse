@@ -71,6 +71,10 @@ class Reviewable < ActiveRecord::Base
   end
 
   def self.valid_type?(type)
+    # Only allow if it's already a class and one of the allowed types
+    return type.in?(types) if type.is_a?(Class)
+    # If it's a string, whitelist via STI names before resolving
+    return false unless sti_names.include?(type.to_s)
     type.to_s.safe_constantize.in?(types)
   end
 
